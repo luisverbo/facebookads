@@ -52,8 +52,9 @@ export async function POST(req: NextRequest) {
   const department = body.department?.name || body.data?.department?.name || null
   const now = new Date().toISOString()
 
-  // Upsert: se o contato já existe, atualiza last_message_at e incrementa contador
-  const { error } = await supabase
+  // Tenta inserir o contato. Se já existe (mesmo workspace + huggy_contact_id),
+  // o conflito é ignorado e nenhuma linha é retornada.
+  const { data: inserted, error } = await supabase
     .from('whatsapp_contacts')
     .upsert({
       workspace_id: workspaceId,
@@ -66,19 +67,28 @@ export async function POST(req: NextRequest) {
       message_count: 1,
     }, {
       onConflict: 'workspace_id,huggy_contact_id',
-      ignoreDuplicates: false,
+      ignoreDuplicates: true,
     })
-
-  // Para contatos existentes, incrementar contador via RPC
-  await supabase.rpc('increment_message_count', {
-    p_workspace_id: workspaceId,
-    p_huggy_contact_id: huggyContactId,
-    p_last_message_at: now,
-  })
+    .select('id')
 
   if (error) {
     console.error('Huggy webhook error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Contato já existia: apenas atualiza last_message_at e incrementa o contador
+  // (sem tocar no first_contact_at) via RPC.
+  if (!inserted || inserted.length === 0) {
+    const { error: rpcError } = await supabase.rpc('increment_message_count', {
+      p_workspace_id: workspaceId,
+      p_huggy_contact_id: huggyContactId,
+      p_last_message_at: now,
+    })
+
+    if (rpcError) {
+      console.error('Huggy webhook error:', rpcError)
+      return NextResponse.json({ error: rpcError.message }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ ok: true })

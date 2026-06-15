@@ -162,6 +162,8 @@ create or replace function public.increment_message_count(
 )
 returns void language plpgsql security definer as $$
 begin
+  -- Atualiza SOMENTE last_message_at e message_count.
+  -- first_contact_at nunca é alterado aqui (preserva o primeiro contato).
   update public.whatsapp_contacts
   set
     message_count = message_count + 1,
