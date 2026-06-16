@@ -2,31 +2,33 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  // Resposta base que carrega o request atual (cookies podem ser reescritos abaixo).
-  let supabaseResponse = NextResponse.next({ request })
+  // Resposta base que carrega os headers do request (cookies reescritos abaixo).
+  let response = NextResponse.next({ request: { headers: request.headers } })
 
+  // @supabase/ssr 0.3.x usa a interface get/set/remove (não getAll/setAll).
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
+        get(name: string) {
+          return request.cookies.get(name)?.value
         },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          // Atualiza os cookies do request...
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          // ...e recria a resposta para propagar os cookies ao navegador.
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({ name, value, ...options })
+          response = NextResponse.next({ request: { headers: request.headers } })
+          response.cookies.set({ name, value, ...options })
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({ name, value: '', ...options })
+          response = NextResponse.next({ request: { headers: request.headers } })
+          response.cookies.set({ name, value: '', ...options })
         },
       },
     }
   )
 
-  // IMPORTANTE: getUser() revalida e renova a sessão, gravando os cookies atualizados.
+  // IMPORTANTE: getUser() revalida/renova a sessão e grava os cookies atualizados.
   // Não coloque código entre createServerClient e getUser para evitar logout aleatório.
   const {
     data: { user },
@@ -44,7 +46,7 @@ export async function middleware(request: NextRequest) {
     url.pathname = to
     url.search = ''
     const res = NextResponse.redirect(url)
-    supabaseResponse.cookies.getAll().forEach(cookie =>
+    response.cookies.getAll().forEach(cookie =>
       res.cookies.set(cookie.name, cookie.value, cookie)
     )
     return res
@@ -60,7 +62,7 @@ export async function middleware(request: NextRequest) {
     return redirectTo('/')
   }
 
-  return supabaseResponse
+  return response
 }
 
 export const config = {
