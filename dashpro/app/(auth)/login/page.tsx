@@ -27,6 +27,8 @@ export default function LoginPage() {
     try {
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithPassword({ email, password })
+      console.log('[DashPro] resultado login =', JSON.stringify(error))
+      console.log('[DashPro] login error.message =', error?.message, '| status =', error?.status, '| raw =', error)
       if (error) {
         setError('E-mail ou senha incorretos.')
         return
