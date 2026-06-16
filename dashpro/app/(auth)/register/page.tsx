@@ -1,11 +1,9 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export default function RegisterPage() {
-  const router = useRouter()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -17,22 +15,33 @@ export default function RegisterPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    })
-    if (error) {
-      setError(error.message)
+
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setError('Configuração do Supabase ausente. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel.')
       setLoading(false)
       return
     }
-    if (data.session) {
-      router.push('/')
-      router.refresh()
-    } else {
-      setMessage('Conta criada. Confirme seu e-mail para acessar.')
+
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      })
+      if (error) {
+        setError(error.message)
+        return
+      }
+      if (data.session) {
+        // Sessão imediata (confirmação de e-mail desativada) → painel.
+        window.location.href = '/'
+      } else {
+        setMessage('Conta criada. Confirme seu e-mail para acessar.')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro inesperado ao criar conta.')
+    } finally {
       setLoading(false)
     }
   }

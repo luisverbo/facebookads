@@ -11,8 +11,6 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    // DEBUG temporário: a env NEXT_PUBLIC_* é embutida no build.
-    console.log('[DashPro] NEXT_PUBLIC_SUPABASE_URL =', process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'undefined')
     setLoading(true)
     setError('')
 
@@ -25,13 +23,11 @@ export default function LoginPage() {
     try {
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      console.log('[DashPro] resultado login =', JSON.stringify(error))
-      console.log('[DashPro] login error.message =', error?.message, '| status =', error?.status, '| raw =', error)
       if (error) {
-        setError('E-mail ou senha incorretos.')
+        setError(error.message || 'E-mail ou senha incorretos.')
         return
       }
-      // Full reload: o servidor relê o cookie de sessão recém-criado.
+      // Full reload: o middleware lê o cookie de sessão recém-criado e libera o painel.
       window.location.href = '/'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro inesperado ao entrar.')
