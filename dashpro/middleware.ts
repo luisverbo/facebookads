@@ -36,6 +36,7 @@ export async function middleware(request: NextRequest) {
   const isApi = pathname.startsWith('/api')
   const isAuthRoute = pathname === '/login' || pathname === '/register'
   const isPublicReport = pathname.startsWith('/report')
+  const isTest = pathname.startsWith('/test')
 
   // Mantém os cookies renovados ao redirecionar.
   const redirectTo = (to: string) => {
@@ -50,7 +51,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Rota protegida sem sessão → login.
-  if (!user && !isApi && !isAuthRoute && !isPublicReport) {
+  if (!user && !isApi && !isAuthRoute && !isPublicReport && !isTest) {
     return redirectTo('/login')
   }
 
