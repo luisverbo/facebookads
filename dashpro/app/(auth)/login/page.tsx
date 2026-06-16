@@ -15,15 +15,27 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError('E-mail ou senha incorretos.')
+
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setError('Configuração do Supabase ausente. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel.')
       setLoading(false)
       return
     }
-    router.push('/')
-    router.refresh()
+
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError('E-mail ou senha incorretos.')
+        return
+      }
+      router.push('/')
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro inesperado ao entrar.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
