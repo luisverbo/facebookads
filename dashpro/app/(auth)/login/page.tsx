@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -10,6 +10,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Probe de hidratação: só vira true se o JS do cliente rodar no navegador.
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    setHydrated(true)
+    console.log('[DashPro] login hidratado — JavaScript do cliente ativo')
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -42,7 +49,13 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white rounded-2xl border border-gray-100 p-10 w-full max-w-sm">
         <h1 className="text-xl font-semibold mb-1 text-gray-900">Entrar no DashPro</h1>
-        <p className="text-sm text-gray-400 mb-6">Acesse seu painel de gestor</p>
+        <p className="text-sm text-gray-400 mb-4">Acesse seu painel de gestor</p>
+        <p
+          className={`text-xs font-medium mb-6 ${hydrated ? 'text-green-600' : 'text-gray-300'}`}
+          suppressHydrationWarning
+        >
+          {hydrated ? '✓ interativo' : '○ carregando JavaScript…'}
+        </p>
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="email"
