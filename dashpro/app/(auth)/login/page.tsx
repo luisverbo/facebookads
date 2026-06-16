@@ -1,11 +1,9 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -33,8 +31,8 @@ export default function LoginPage() {
         setError('E-mail ou senha incorretos.')
         return
       }
-      router.push('/')
-      router.refresh()
+      // Full reload: o servidor relê o cookie de sessão recém-criado.
+      window.location.href = '/'
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro inesperado ao entrar.')
     } finally {
